@@ -1,0 +1,17 @@
+vblood_backend/
+├── venv/                    # Python virtual environment
+├── src/
+│   ├── models/             # Database models
+│   │   ├── user.py         # User model with authentication
+│   │   ├── inventory.py    # Inventory and items
+│   │   ├── message.py      # Messaging system
+│   │   ├── campaign.py     # Campaign and storylines
+│   │   └── character.py    # Unlockable characters
+│   ├── routes/             # API endpoints
+│   │   ├── user.py         # User authentication routes
+│   │   └── combat.py       # Combat and game mechanics
+│   ├── static/             # Static files (for frontend)
+│   ├── database/           # SQLite database
+│   │   └── app.db          # Main database file
+│   └── main.py             # Flask application entry point
+└── requirements.txt        # Python dependencies
