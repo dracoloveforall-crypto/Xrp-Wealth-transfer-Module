@@ -1,0 +1,22 @@
+// energy_royalty.c
+#include "hookapi.h"
+
+int64_t hook(uint32_t reserved) {
+    // 1. Check if the transaction is a Payment
+    if (otxn_type() != ttPAYMENT)
+        rollback(SBUF("Not a payment"), 1);
+
+    // 2. Define the Royalty Percentage (e.g., 5%)
+    // In XRPL Hooks, we calculate this before the payment is finalized
+    int64_t amount = otxn_amount();
+    int64_t royalty = amount / 20; // 5%
+
+    // 3. Emit a new transaction to the "Solar Treasury"
+    unsigned char treasury_acc[20] = { /* Ripple Treasury Address Bytes */ };
+    
+    etxn_reserve(1); 
+    // Logic to send 'royalty' to treasury_acc...
+    
+    accept(SBUF("Royalty processed"), 0);
+    return 0;
+}
