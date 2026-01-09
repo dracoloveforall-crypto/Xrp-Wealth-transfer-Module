@@ -1,0 +1,15 @@
+/* Basic XRPL Hook Logic to filter 'Adulterants' */
+#include "hookapi.h"
+
+int64_t hook(uint32_t reserved) {
+    // Only allow transactions from verified trust lines or 'Pure' assets
+    if (otxn_type() == ttPAYMENT) {
+        uint8_t issuer[20];
+        // Logic to verify if the asset issuer is on a 'clean' whitelist
+        if (!is_verified_issuer(issuer)) {
+            rollback(SVAR("Rejected: Unverified Adulterant"), 1);
+        }
+    }
+    accept(SVAR("Clean Transaction Accepted"), 0);
+    return 0;
+}
