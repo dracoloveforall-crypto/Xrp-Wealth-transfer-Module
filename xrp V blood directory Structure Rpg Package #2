@@ -1,0 +1,15 @@
+vblood-frontend/
+├── public/                 # Static assets
+├── src/
+│   ├── assets/            # Images and static files
+│   ├── components/
+│   │   └── ui/            # UI components (shadcn/ui)
+│   ├── hooks/             # Custom React hooks
+│   ├── lib/               # Utility functions
+│   ├── App.jsx            # Main application component
+│   ├── App.css            # Vampire-themed styles
+│   ├── index.css          # Global styles
+│   └── main.jsx           # React entry point
+├── index.html             # HTML template
+├── package.json           # Dependencies and scripts
+└── vite.config.js         # Vite configuration
