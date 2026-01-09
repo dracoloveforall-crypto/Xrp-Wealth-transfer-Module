@@ -1,0 +1,14 @@
+import xrpl
+from xrpl.clients import JsonRpcClient
+from xrpl.wallet import generate_faucet_wallet
+from xrpl.models.transactions import Memo
+
+# Connecting to the XRPL Testnet
+client = JsonRpcClient("https://s.altnet.rippletest.net:51234")
+wallet = generate_faucet_wallet(client)
+
+def anchor_biological_data(bio_hash):
+    # 'bio_hash' is the SHA-256 fingerprint of your scientific data
+    memo = Memo(memo_data=bio_hash.encode('hex'))
+    # Build transaction to store the biological signature
+    # This creates a permanent 'science block' on the ledger
