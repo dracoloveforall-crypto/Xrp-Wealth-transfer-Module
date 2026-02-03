@@ -1,0 +1,56 @@
+name: XRP Pokémon Evolution Merger
+
+on:
+  push:
+    branches: [ "*" ] # Triggers evolution on every push
+  workflow_dispatch:
+
+jobs:
+  evolve-and-sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Hatching Code (Checkout)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches the entire "DNA" history of the repo
+
+      # 1. PURIFY: Remove "Status Ailments" (Broken Syntax & Adulterants)
+      - name: Cleanse Code Base
+        run: |
+          # Removes debug logs and heals formatting instantly
+          sed -i '/console.log/d' **/*.js || true
+          npx prettier --write . || true
+
+      # 2. EVOLVE: Resolve Differences & Merge All Branches
+      - name: Synthetic Branch Fusion
+        run: |
+          git config --global user.name "XRP-Evolver-Bot"
+          git config --global user.email "evolution@anderson-creek.local"
+          
+          CURRENT_BRANCH=${{ github.ref_name }}
+          # Locate all existing "species" (branches) in the repo
+          ALL_BRANCHES=$(git branch -r | grep -v '->' | sed 's/origin\///g')
+
+          for species in $ALL_BRANCHES; do
+            if [ "$species" != "$CURRENT_BRANCH" ]; then
+              echo "Evolving $species to match $CURRENT_BRANCH..."
+              git checkout $species || git checkout -b $species
+              
+              # 'recursive -X theirs' is the "Ultimate Move": 
+              # It forces the merge and resolves all differences by 
+              # choosing your newest code automatically.
+              git merge $CURRENT_BRANCH -X theirs --allow-unrelated-histories -m "Evolution Complete: $CURRENT_BRANCH integrated into $species"
+              
+              git push origin $species
+            fi
+          done
+
+      # 3. APEX COMMIT: Syncing the Primal (Main) Branch
+      - name: Final Apex Sync
+        run: |
+          git checkout main || git checkout master
+          git merge ${{ github.ref_name }} -X theirs
+          git push origin HEAD
