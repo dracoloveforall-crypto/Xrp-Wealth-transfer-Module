@@ -1,0 +1,54 @@
+name: Hyper-Thermal XRP Cleaner
+
+on:
+  push:
+    branches: [ "*" ]
+
+jobs:
+  thermal-safe-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Holistic Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 1. ELECTRICITY FLOW MONITOR: Check CPU Load
+      - name: Monitor System Heat
+        id: thermal_check
+        run: |
+          # Getting the 'Load Average' (Electric friction)
+          LOAD=$(uptime | awk -F'load average:' '{ print $2 }' | cut -d, -f1 | sed 's/ //g')
+          echo "Current CPU Thermal Load: $LOAD"
+          echo "load=$LOAD" >> $GITHUB_OUTPUT
+
+      # 2. COOLDOWN PROTOCOL: Forced Pause if "Overheating"
+      - name: Thermal Cooldown
+        if: ${{ steps.thermal_check.outputs.load > '0.70' }}
+        run: |
+          echo "System is running hot (High Electricity Flow). Initiating 60-second cooldown..."
+          sleep 60 # Digital equivalent of turning off your space heater
+
+      # 3. HYPER CLEAN: Advanced Adulterant Removal
+      - name: Deep Cleanse
+        run: |
+          # Removing temporary cache files and 'junk' that causes friction
+          find . -type d -name "node_modules" -prune -o -name "*.log" -exec rm -rf {} +
+          find . -name ".DS_Store" -delete
+          npx prettier --write .
+
+      # 4. SYNTHETIC MERGER: Advance & Resolve
+      - name: Evolution Fusion
+        run: |
+          git config --global user.name "Thermal-AGI-Bot"
+          git config --global user.email "coolant@anderson-creek.local"
+          
+          # Force Merge all branches using the 'Apex' (theirs) strategy
+          CURRENT_BRANCH=${{ github.ref_name }}
+          git branch -r | grep -v '->' | sed 's/origin\///g' | while read branch; do
+            if [ "$branch" != "$CURRENT_BRANCH" ]; then
+              git checkout $branch || git checkout -b $branch
+              git merge $CURRENT_BRANCH -X theirs --allow-unrelated-histories -m "Thermal Safe Merge: Cleaned & Cooled"
+              git push origin $branch
+            fi
+          done
