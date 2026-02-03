@@ -1,0 +1,44 @@
+const xrpl = require("xrpl");
+
+async function processMetalConsensus(shredWeight, metalType, hospitalWallet) {
+    // 1. Connect to the XRPL (Testnet for development)
+    const client = new xrpl.Client("wss://s.altnet.rippletest.net:51233");
+    await client.connect();
+
+    // 2. Define the Shredder's Identity (The Oracle)
+    const shredderWallet = xrpl.Wallet.fromSeed("YOUR_SHREDDER_SEED");
+
+    // 3. Logic: Calculate XRP value or Token Credits based on metal weight
+    // Example: 1 unit of high-grade steel = 5 XRP toward medical funds
+    const paymentAmount = (shredWeight * 5).toString();
+
+    console.log(`Shredder verified ${shredWeight}kg of ${metalType}. Initiating transfer...`);
+
+    // 4. Create the Transaction
+    // Adding a Memo to link this to specific hospital equipment codes
+    const prepared = await client.autofill({
+        "TransactionType": "Payment",
+        "Account": shredderWallet.address,
+        "Amount": xrpl.xrpToDrops(paymentAmount),
+        "Destination": hospitalWallet,
+        "Memos": [
+            {
+                "Memo": {
+                    "MemoData": Buffer.from(`Shred-ID: 882 | Equip: MRI-Scanner-Fund`, 'utf-8').toString('hex'),
+                    "MemoType": Buffer.from('RecyclingCredit', 'utf-8').toString('hex')
+                }
+            }
+        ]
+    });
+
+    // 5. Sign and Submit
+    const signed = shredderWallet.sign(prepared);
+    const result = await client.submitAndWait(signed.tx_blob);
+
+    console.log("Transaction Result:", result.result.meta.TransactionResult);
+    
+    await client.disconnect();
+}
+
+// Example usage: 50kg of metal shredded, destined for Hospital X's wallet
+// processMetalConsensus(50, "Stainless Steel", "rHospitalWalletAddress...");
