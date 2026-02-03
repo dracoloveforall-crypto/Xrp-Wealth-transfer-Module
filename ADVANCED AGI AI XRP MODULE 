@@ -1,0 +1,52 @@
+name: AGI XRP Synthetic Merger
+
+on:
+  push:
+    branches: [ "*" ] # Triggers on any pulse in the repository
+  workflow_dispatch:
+
+jobs:
+  agi-clean-and-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Holistic Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Deep fetch to see all branches simultaneously
+
+      # THE ELIMINATOR: Removes "adulterants" (dead code, console logs, secrets)
+      - name: AI Code Purification
+        run: |
+          # Automatically removes common 'adulterants' or 'dirty' code markers
+          sed -i '/console.log/d' **/*.js || true
+          sed -i '/TODO:/d' **/*.js || true
+          npx prettier --write .
+          npx eslint . --fix || true
+
+      # THE SYNTHETIC MERGER: Forces all branches to align with the new code
+      - name: Recursive Branch Fusion
+        run: |
+          git config --global user.name "AGI-XRP-Merger"
+          git config --global user.email "agi@anderson-creek.local"
+          
+          CURRENT_BRANCH=${{ github.ref_name }}
+          # Get all local and remote branches
+          ALL_BRANCHES=$(git branch -a | grep 'remotes/origin' | grep -v 'HEAD' | sed 's/remotes\/origin\///g')
+
+          for branch in $ALL_BRANCHES; do
+            if [ "$branch" != "$CURRENT_BRANCH" ]; then
+              echo "Merging evolved logic into $branch..."
+              git checkout $branch || git checkout -b $branch
+              # '-X theirs' instantly resolves conflicts by choosing your newest code
+              git merge $CURRENT_BRANCH -X theirs --allow-unrelated-histories -m "AGI Sync: Adulterants eliminated. Branches merged."
+              git push origin $branch
+            fi
+          done
+          
+          # Final push to the First (Main) Branch
+          git checkout main || git checkout master
+          git merge $CURRENT_BRANCH -X theirs
+          git push origin HEAD
