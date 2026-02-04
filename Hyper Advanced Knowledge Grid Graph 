@@ -1,0 +1,47 @@
+import spacy
+from collections import defaultdict
+
+# 1. Load a high-value NLP engine (requires: pip install spacy)
+# nlp = spacy.load("en_core_web_md") 
+
+def extract_value_entities(text):
+    """
+    Analyzes raw system data to identify 'Value Entities' 
+    like Users, Projects, and Financial impacts.
+    """
+    # Simulated extraction for this snippet
+    mock_entities = {
+        "PERSON": ["DevTeam_Alpha"],
+        "ORG": ["CloudServer_West"],
+        "MONEY": ["$50,000 Risk"],
+        "ISSUE": ["Memory Leak"]
+    }
+    return mock_entities
+
+def update_knowledge_graph(entity_map):
+    """
+    Connects extracted data into a relational 'Value Graph'
+    to prioritize engineering efforts based on business impact.
+    """
+    knowledge_graph = defaultdict(list)
+    
+    for label, items in entity_map.items():
+        for item in items:
+            # Create a 'Value Link'
+            link = f"Link: {item} -> impact_analysis_node"
+            knowledge_graph[label].append(link)
+            print(f"Mapped {label}: {item} to Value Chain.")
+    
+    return knowledge_graph
+
+# --- Value Creation Simulation ---
+raw_data = "DevTeam_Alpha reported a Memory Leak on CloudServer_West affecting a $50,000 contract."
+
+print("Analyzing tech-value stream...")
+entities = extract_value_entities(raw_data)
+graph = update_knowledge_graph(entities)
+
+# 2. Strategic Outcome: Auto-prioritize work
+if "$50,000 Risk" in entities["MONEY"]:
+    print("\n--- HIGH VALUE ACTION ---")
+    print("Priority: Level 1 - Urgent fix required to protect revenue.")
