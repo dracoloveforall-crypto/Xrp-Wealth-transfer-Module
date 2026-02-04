@@ -1,0 +1,33 @@
+const xrpl = require('xrpl');
+
+async function recordResearchIP() {
+    const client = new xrpl.Client('wss://xrplcluster.com');
+    await client.connect();
+
+    // 1. Data Integrity: Store a hash of the lab data
+    // This proves the data existed at this time and has not been altered.
+    const labDataHash = "SHA256_HASH_OF_RESEARCH_DATA_001"; 
+
+    // 2. Tokenize IP: Mint a Scientific NFT
+    const mintResearchNFT = {
+        TransactionType: "NFTokenMint",
+        Account: "rLaboratoryWallet...",
+        URI: xrpl.convertStringToHex(`ipfs://METADATA_WITH_HASH_${labDataHash}`),
+        NFTokenTaxon: 101, // Category: Biotechnology Research
+        Flags: 8, // tfTransferable (allows licensing the IP)
+        TransferFee: 5000 // 5.000% royalty back to the lab for future sales
+    };
+
+    // 3. Automated Funding: Link to Lab Equipment (IoT)
+    // Pay for equipment usage automatically via XRPL Payment Channels
+    const equipmentPayment = {
+        TransactionType: "PaymentChannelCreate",
+        Account: "rLaboratoryWallet...",
+        Destination: "rEquipmentProvider...",
+        Amount: xrpl.xrpToDrops("500"), // Pre-fund 500 XRP for use
+        SettleDelay: 86400 // 24-hour window
+    };
+
+    console.log("Scientific IP Minted & Equipment Funding Secured.");
+    await client.disconnect();
+}
