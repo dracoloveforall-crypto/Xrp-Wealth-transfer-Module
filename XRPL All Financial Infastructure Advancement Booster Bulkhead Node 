@@ -1,0 +1,40 @@
+import xrpl
+from xrpl.clients import JsonRpcClient
+from xrpl.models.transactions import Payment
+from xrpl.wallet import Wallet
+
+# 1. Connect to the Financial Infrastructure (Network)
+# This uses the Testnet for safety during development
+JSON_RPC_URL = "https://s.altnet.rippletest.net:51234"
+client = JsonRpcClient(JSON_RPC_URL)
+
+# 2. Your Wallet (The 'Bank' or 'User' account)
+# In production, never hardcode seeds! Use environment variables.
+test_wallet = Wallet.create(crypto_type=xrpl.constants.CryptoAlgorithm.ED25519)
+
+def send_financial_data_with_xrp(destination, amount_xrp, financial_memo):
+    """
+    Connects financial infrastructure data to an XRP transaction.
+    The 'financial_memo' would contain ISO 20022 formatted data.
+    """
+    
+    # Create the payment object
+    payment_tx = Payment(
+        account=test_wallet.address,
+        amount=xrpl.utils.xrp_to_drops(amount_xrp),
+        destination=destination,
+        memos=[{
+            "memo": {
+                "memo_data": financial_memo.encode("utf-8").hex().upper(),
+                "memo_type": "text/xml".encode("utf-8").hex().upper(),
+                "memo_format": "ISO20022".encode("utf-8").hex().upper()
+            }
+        }]
+    )
+    
+    # Sign and submit to the global ledger
+    response = xrpl.transaction.submit_and_wait(payment_tx, client, test_wallet)
+    return response
+
+# Example: Sending a payment with an 'Instruction ID' from a bank database
+print(send_financial_data_with_xrp("rDestinationAddress...", 100, "INST-ID-99021-X"))
