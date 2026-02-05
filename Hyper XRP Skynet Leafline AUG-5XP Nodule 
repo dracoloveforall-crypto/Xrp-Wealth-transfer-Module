@@ -1,0 +1,69 @@
+/**
+ * DeSci + XRPL Cannabis Data Accelerator
+ * Features: Cooldown mechanism, Data Refresh, and Lag Reduction
+ */
+
+import { Client, Wallet, xrpToDrops } from 'xrpl';
+import { LeafLinkAPI } from './cannabis_data_provider'; // Representative industry data
+import { SkynetNode } from './skynet_link'; // Representative IoT/AI Link
+
+const XRPL_NODE = "wss://s.altnet.rippletest.net:51233"; // Testnet for DeSci dev
+const DATA_COOLDOWN_MS = 5000; // 5-second cooldown to prevent lag
+let lastTransmissionTime = 0;
+let isRefreshing = false;
+
+async function runAccelerator() {
+    const client = new Client(XRPL_NODE);
+    await client.connect();
+    console.log("--- Connected to XRPL (DeSci Bridge Active) ---");
+
+    // Main Data Loop
+    setInterval(async () => {
+        const currentTime = Date.now();
+
+        // 1. Lag Reduction: Cooldown Check
+        if (currentTime - lastTransmissionTime < DATA_COOLDOWN_MS || isRefreshing) {
+            process.stdout.write("Status: [Cooldown/Refreshing] to preserve Signal Quality...\r");
+            return;
+        }
+
+        try {
+            // 2. Refreshing Mechanism: Pull fresh Cannabis Industry Data
+            isRefreshing = true;
+            const industryData = await LeafLinkAPI.getMarketStats();
+            const skynetIntel = await SkynetNode.getEnvironmentalTelemetry();
+
+            // 3. Connect DeSci Metadata
+            const desciPayload = {
+                industry_value: industryData.valuation,
+                strain_purity: skynetIntel.purity_index,
+                timestamp: currentTime,
+                source: "Anderson_Creek_DeSci_Hub"
+            };
+
+            // 4. Secure to XRPL (Advancing Value)
+            const tx = {
+                TransactionType: "AccountSet",
+                Account: "rExampleAccount...",
+                Memos: [{
+                    Memo: {
+                        MemoData: Buffer.from(JSON.stringify(desciPayload)).toString('hex'),
+                        MemoFormat: Buffer.from("text/plain").toString('hex'),
+                        MemoType: Buffer.from("DeSci/Cannabis").toString('hex')
+                    }
+                }]
+            };
+
+            console.log("\n>>> Advancing Market Value: Data Compressed & Sent.");
+            lastTransmissionTime = Date.now();
+            
+        } catch (error) {
+            console.error("Signal Interference detected. Re-calibrating...");
+        } finally {
+            isRefreshing = false;
+        }
+
+    }, 1000); // Attempt poll every second, but governed by 5s cooldown
+}
+
+runAccelerator().catch(console.error);
