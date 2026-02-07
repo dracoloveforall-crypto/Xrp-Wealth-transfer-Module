@@ -1,0 +1,426 @@
+import asyncio
+import json
+import logging
+import requests
+import time
+import os
+
+# --- Configuration --- #
+# Configure logging for the entire system
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# --- XRPL Bridge Monitor (from xrpl_bridge_monitor.py) --- #
+# Requires xrpl-py library: pip install xrpl-py
+try:
+    from xrpl.asyncio.clients import AsyncJsonRpcClient
+    from xrpl.models.requests import LedgerEntry
+    XRPL_LIB_AVAILABLE = True
+except ImportError:
+    logger.warning("xrpl-py library not found. XRPL Bridge Monitor functionality will be limited.")
+    XRPL_LIB_AVAILABLE = False
+
+class XRPLBridgeMonitor:
+    def __init__(self, node_url="https://s.altnet.rippletest.net:51234"):
+        if XRPL_LIB_AVAILABLE:
+            self.client = AsyncJsonRpcClient(node_url)
+        else:
+            self.client = None
+            logger.error("XRPLBridgeMonitor cannot function without xrpl-py library.")
+
+    async def get_bridge_entry(self, bridge_index):
+        """
+        Retrieves a Bridge ledger entry from the XRPL.
+        """
+        if not self.client:
+            return None
+        try:
+            request = LedgerEntry(
+                bridge=bridge_index,
+                ledger_index="validated"
+            )
+            response = await self.client.request(request)
+            if response.is_successful():
+                return response.result.get("node")
+            else:
+                logger.error(f"Failed to retrieve bridge entry: {response.result}")
+                return None
+        except Exception as e:
+            logger.exception(f"Error fetching bridge entry: {e}")
+            return None
+
+    async def monitor_bridge_health(self, bridge_index, interval=60):
+        """
+        Monitors the health and status of a specific bridge.
+        """
+        if not self.client:
+            logger.error("XRPL Bridge Monitor is not initialized due to missing xrpl-py library.")
+            return
+
+        logger.info(f"Starting monitor for XRPL bridge: {bridge_index}")
+        while True:
+            entry = await self.get_bridge_entry(bridge_index)
+            if entry:
+                logger.info(f"XRPL Bridge Status: {json.dumps(entry, indent=2)}")
+                # Placeholder for anomaly detection or automated reporting
+            else:
+                logger.warning("XRPL Bridge entry not found or error occurred.")
+            
+            await asyncio.sleep(interval)  # Monitor every minute
+
+# --- Token Monitoring Tool (from token_monitoring_tool.py) --- #
+class TokenMonitor:
+    def __init__(self):
+        self.tokens = {
+            "ZBCN": "https://api.coingecko.com/api/v3/simple/price?ids=zebec-network&vs_currencies=usd&include_24hr_vol=true",
+            "XRP": "https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_vol=true"
+        }
+
+    def fetch_price(self, token_name):
+        """
+        Fetches the current price and 24h volume for a given token.
+        """
+        try:
+            url = self.tokens.get(token_name)
+            if not url:
+                return None
+            
+            response = requests.get(url)
+            response.raise_for_status() # Raise an exception for HTTP errors
+            data = response.json()
+            
+            # Coingecko ID mapping
+            id_map = {"ZBCN": "zebec-network", "XRP": "ripple"}
+            token_id = id_map.get(token_name)
+            
+            if token_id and token_id in data:
+                price = data[token_id].get("usd")
+                volume = data[token_id].get("usd_24h_vol")
+                if price is not None and volume is not None:
+                    return {"price": price, "volume": volume}
+                else:
+                    logger.error(f"Missing price or volume data for {token_name} in response.")
+                    return None
+            else:
+                logger.error(f"Token ID {token_id} not found in CoinGecko response for {token_name}.")
+                return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error fetching price for {token_name}: {e}")
+            return None
+        except json.JSONDecodeError:
+            logger.error(f"JSON decode error for {token_name}. Response: {response.text}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error monitoring {token_name}: {e}")
+            return None
+
+    async def monitor_tokens(self, interval=300):
+        """
+        Continuously monitors the specified tokens.
+        """
+        logger.info("Starting Token Monitoring Tool...")
+        while True:
+            for token in self.tokens.keys():
+                stats = self.fetch_price(token)
+                if stats:
+                    logger.info(f"[{token}] Price: ${stats['price']:.6f} | 24h Vol: ${stats['volume']:,.2f}")
+                else:
+                    logger.warning(f"Could not retrieve data for {token}")
+            
+            await asyncio.sleep(interval)
+
+# --- GitHub Issue Monitor (from github_issue_monitor.py) --- #
+class GitHubIssueMonitor:
+    def __init__(self, token=None):
+        self.base_url = "https://api.github.com/repos/"
+        self.headers = {"Accept": "application/vnd.github.v3+json"}
+        if token:
+            self.headers["Authorization"] = f"token {token}"
+        
+        self.repos = [
+            "XRPLF/rippled",
+            "Zebec-protocol/migration-program",
+            "ondoprotocol/usdy-noble"
+        ]
+
+    def check_new_issues(self, repo):
+        """
+        Checks for new open issues in a repository.
+        """
+        try:
+            url = f"{self.base_url}{repo}/issues?state=open&sort=created&direction=desc"
+            response = requests.get(url, headers=self.headers)
+            response.raise_for_status() # Raise an exception for HTTP errors
+            issues = response.json()
+            if issues:
+                latest_issue = issues[0]
+                logger.info(f"[{repo}] Latest Issue: #{latest_issue['number']} - {latest_issue['title']}")
+                return latest_issue
+            else:
+                logger.info(f"[{repo}] No open issues found.")
+                return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error fetching issues for {repo}: {e}")
+            return None
+        except json.JSONDecodeError:
+            logger.error(f"JSON decode error for {repo}. Response: {response.text}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error monitoring {repo}: {e}")
+            return None
+
+    async def run_monitor(self, interval=3600):
+        """
+        Runs the issue monitor for all configured repositories.
+        """
+        logger.info("Starting GitHub Issue Monitor...")
+        while True:
+            for repo in self.repos:
+                self.check_new_issues(repo)
+            await asyncio.sleep(interval) # Check every hour
+
+# --- IoT Blockchain Bridge (from iot_blockchain_bridge.py) --- #
+class IoTBlockchainBridge:
+    """
+    A bridge module that connects blockchain events (XRP, ZBCN, UST) 
+    to physical IoT devices using the Matter 2026 protocol.
+    """
+    def __init__(self):
+        self.device_registry = {
+            "TV": {"id": "matter-tv-001", "status": "on", "location": "living_room"},
+            "Heater": {"id": "matter-heater-002", "status": "on", "location": "bedroom"},
+            "Speaker": {"id": "matter-speaker-003", "status": "idle", "location": "kitchen"}
+        }
+        self.security_state = "SAFE"
+
+    async def handle_blockchain_event(self, event):
+        """
+        Processes incoming blockchain events and triggers physical device responses.
+        """
+        event_type = event.get("type")
+        severity = event.get("severity", "LOW")
+        
+        logger.info(f"Received Blockchain Event: {event_type} (Severity: {severity})")
+        
+        if severity == "CRITICAL":
+            await self.trigger_emergency_shutdown()
+        elif event_type == "SECURITY_BUFF_ACTIVATED":
+            await self.apply_physical_security_buff(event.get("buff_name"))
+
+    async def trigger_emergency_shutdown(self):
+        """
+        Cuts off power to critical devices to prevent data theft or physical harm.
+        """
+        logger.warning("CRITICAL THREAT DETECTED. Initiating physical device shutdown...")
+        for device_name, info in self.device_registry.items():
+            if info["status"] != "off":
+                # In a real 2026 scenario, this would send a Matter 'PowerOff' command
+                info["status"] = "off"
+                logger.info(f"Matter Command Sent: {device_name} ({info['id']}) -> POWER_OFF")
+        
+        self.security_state = "LOCKDOWN"
+        logger.info("Physical environment in LOCKDOWN mode.")
+
+    async def apply_physical_security_buff(self, buff_name):
+        """
+        Applies a physical security 'buff' to the user's environment.
+        """
+        logger.info(f"Applying Security Buff: {buff_name}")
+        if buff_name == "GhostMode":
+            # Disable Bluetooth and mask local network presence
+            logger.info("Matter Command Sent: ALL_DEVICES -> DISABLE_BLUETOOTH")
+            logger.info("Matter Command Sent: HUB -> ENABLE_NETWORK_MASKING")
+        elif buff_name == "GuardianLink":
+            # Alert speakers and lock all doors
+            logger.info("Matter Command Sent: Speaker -> PLAY_ALERT_CHIME")
+            logger.info("Matter Command Sent: SMART_LOCKS -> LOCK_ALL")
+
+    async def monitor_vocational_data(self):
+        """
+        Monitors user vocational and real-life data for unauthorized access.
+        """
+        # This simulates the 2026 AGI feature of monitoring physical interaction data
+        while True:
+            # Placeholder for AGI sensor data integration
+            unauthorized_interaction = False 
+            if unauthorized_interaction:
+                logger.warning("Unauthorized physical interaction detected near the digital vault.")
+                await self.handle_blockchain_event({"type": "PHYSICAL_BREACH", "severity": "CRITICAL"})
+            await asyncio.sleep(10)
+
+# --- Device Crypto Importer (from device_crypto_importer.py) --- #
+class DeviceCryptoImporter:
+    """
+    A module to import crypto functionalities into non-traditional devices 
+    like refrigerators, speaker boxes, and Bluetooth peripherals.
+    """
+    def __init__(self):
+        self.supported_protocols = ["Matter", "Bluetooth LE", "Zigbee 3.0"]
+        self.device_profiles = {
+            "refrigerator": {"display": True, "wallet_sync": "read-only", "alert_system": True},
+            "speaker_box": {"voice_auth": True, "transaction_audio_confirm": True},
+            "bluetooth_headset": {"haptic_alerts": True, "quick_approve": False}
+        }
+
+    def generate_device_config(self, device_type, token_type):
+        """
+        Generates a configuration file for a specific device to support XRP, ZBCN, or UST.
+        """
+        if device_type not in self.device_profiles:
+            logger.error(f"Device type {device_type} not supported.")
+            return None
+
+        profile = self.device_profiles[device_type]
+        config = {
+            "device_type": device_type,
+            "supported_tokens": [token_type],
+            "security_features": {
+                "anti_hacking_node_sync": True,
+                "encryption": "FHE-2026",
+                "biometric_bridge": profile.get("voice_auth", False)
+            },
+            "interface_mapping": {
+                "alerts": "visual" if profile.get("display") else "audio",
+                "confirmation_method": "voice" if profile.get("voice_auth") else "haptic"
+            }
+        }
+        
+        filename = f"{device_type}_{token_type.lower()}_config.json"
+        logger.info(f"Generated crypto configuration for {device_type}: {filename}")
+        # In a real scenario, this would save to a file or a device-specific registry
+        return config
+
+    def deploy_to_bluetooth(self, device_id, token_data):
+        """
+        Simulates deploying a secure token module to a Bluetooth device.
+        """
+        logger.info(f"Establishing secure Bluetooth LE link to device: {device_id}")
+        logger.info(f"Injecting crypto-module for {token_data['name']} ({token_data['symbol']})")
+        logger.info("Verifying anti-hacking 'buff' compatibility...")
+        logger.info("Deployment successful. Device now acts as a secure haptic alert node.")
+
+# --- Physical Crypto Interaction (from physical_crypto_interaction.py) --- #
+class PhysicalCryptoInteraction:
+    """
+    Prototype module for real-world interaction between blockchain tokens 
+    and physical hardware (TVs, Heaters, etc.) using 2026 AGI triggers.
+    """
+    def __init__(self):
+        self.active_buffs = []
+        self.device_states = {
+            "TV": "ONLINE",
+            "Heater": "ACTIVE",
+            "Home_Security": "ARMED"
+        }
+
+    def trigger_physical_action(self, token_symbol, action_code):
+        """
+        Triggers a physical action based on a specific token event.
+        """
+        logger.info(f"Triggering physical action for {token_symbol}: CODE_{action_code}")
+        
+        if action_code == "SHUTDOWN_ALL":
+            self.execute_shutdown()
+        elif action_code == "ALERT_USER":
+            self.play_physical_alert()
+        elif action_code == "LOCK_VAULT":
+            self.secure_physical_vault()
+
+    def execute_shutdown(self):
+        """
+        Simulates cutting off power to TV and Heater.
+        """
+        logger.warning("AGI COMMAND: SHUTDOWN_ALL initiated.")
+        for device in ["TV", "Heater"]:
+            self.device_states[device] = "OFFLINE"
+            logger.info(f"PHYSICAL INTERFACE: Power disconnected for {device}.")
+        
+        # Simulated 2026-era 'vocational data' check
+        logger.info("Verifying vocational data integrity... [SECURE]")
+
+    def play_physical_alert(self):
+        """
+        Simulates an audio/visual alert on household devices.
+        """
+        logger.info("PHYSICAL INTERFACE: Displaying security alert on TV screen.")
+        logger.info("PHYSICAL INTERFACE: Broadcasting alert chime through Speaker Box.")
+
+    def secure_physical_vault(self):
+        """
+        Simulates locking a physical safe or digital vault.
+        """
+        logger.info("PHYSICAL INTERFACE: Engaging electronic locks on Digital Vault.")
+        self.device_states["Home_Security"] = "MAX_LOCKDOWN"
+
+    def apply_security_buff(self, buff_name):
+        """
+        Applies a 'buff' to the blockchain account that has physical side-effects.
+        """
+        logger.info(f"Applying Security Buff: {buff_name}")
+        self.active_buffs.append(buff_name)
+        
+        if buff_name == "AntiTheft_2026":
+            logger.info("Buff Effect: Real-time biometric verification required for all IoT commands.")
+        elif buff_name == "PrivacyShield":
+            logger.info("Buff Effect: Bluetooth and WiFi SSID masking enabled.")
+
+# --- Main Orchestration Logic --- #
+async def main():
+    logger.info("Starting Unified Advanced Crypto System...")
+
+    # Initialize components
+    xrpl_monitor = XRPLBridgeMonitor()
+    token_monitor = TokenMonitor()
+    github_monitor = GitHubIssueMonitor(token=os.getenv("GITHUB_TOKEN")) # GITHUB_TOKEN for higher rate limits
+    iot_bridge = IoTBlockchainBridge()
+    device_importer = DeviceCryptoImporter()
+    physical_interaction = PhysicalCryptoInteraction()
+
+    # --- Demonstrate functionalities --- #
+
+    # 1. Token Monitoring
+    logger.info("\n--- Demonstrating Token Monitoring ---")
+    # Fetch prices once for demonstration, in a real scenario, this would be a continuous task
+    xrp_stats = token_monitor.fetch_price("XRP")
+    if xrp_stats: logger.info(f"Current XRP: ${xrp_stats['price']:.6f}")
+    zbcn_stats = token_monitor.fetch_price("ZBCN")
+    if zbcn_stats: logger.info(f"Current ZBCN: ${zbcn_stats['price']:.6f}")
+
+    # 2. GitHub Issue Monitoring
+    logger.info("\n--- Demonstrating GitHub Issue Monitoring ---")
+    github_monitor.check_new_issues("XRPLF/rippled")
+
+    # 3. IoT Integration & Physical Interaction
+    logger.info("\n--- Demonstrating IoT Integration & Physical Interaction ---")
+    # Simulate a critical security event from blockchain
+    simulated_blockchain_event = {
+        "type": "UNAUTHORIZED_XRP_TRANSFER",
+        "severity": "CRITICAL",
+        "token": "XRP"
+    }
+    await iot_bridge.handle_blockchain_event(simulated_blockchain_event)
+
+    # Simulate applying a security buff with physical effects
+    physical_interaction.apply_security_buff("AntiTheft_2026")
+    physical_interaction.trigger_physical_action("XRP", "SHUTDOWN_ALL")
+
+    # Demonstrate device crypto importer
+    refrigerator_config = device_importer.generate_device_config("refrigerator", "UST")
+    device_importer.deploy_to_bluetooth("BT-SPEAKER-X1", {"name": "XRP Ledger", "symbol": "XRP"})
+
+    logger.info("\nUnified Advanced Crypto System demonstration complete.")
+    logger.info("To run continuous monitors, uncomment the asyncio.create_task lines in main().")
+
+    # Example of how to run continuous tasks concurrently
+    # tasks = [
+    #     asyncio.create_task(xrpl_monitor.monitor_bridge_health("YOUR_BRIDGE_INDEX")),
+    #     asyncio.create_task(token_monitor.monitor_tokens()),
+    #     asyncio.create_task(github_monitor.run_monitor()),
+    #     asyncio.create_task(iot_bridge.monitor_vocational_data())
+    # ]
+    # await asyncio.gather(*tasks)
+
+if __name__ == "__main__":
+    # Ensure xrpl-py is installed if XRPL monitoring is desired
+    # You might need to run: pip install xrpl-py
+    asyncio.run(main())
