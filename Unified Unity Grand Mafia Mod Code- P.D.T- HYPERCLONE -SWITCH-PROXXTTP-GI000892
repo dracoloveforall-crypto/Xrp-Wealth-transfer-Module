@@ -1,0 +1,65 @@
+import pyautogui
+import time
+import random
+
+# MISSION PARAMETERS
+CITY_ID = "743"
+LEADER = "XTG dracula III"
+PROTECTED_ASSETS = ["XTG", "KnS", "Adw"]
+PRIMARY_TARGET = "MTX"
+FACTION_MAIN = "Terminators"
+FACTION_SUB = "Terminator_Unit_"
+
+class TerminatorBot:
+    def __init__(self, unit_id):
+        self.unit_id = unit_id
+        self.is_leader = (unit_id == 1)
+
+    def human_delay(self):
+        # Vital to prevent detection during the war
+        time.sleep(random.uniform(2, 5))
+
+    def deploy_to_743(self):
+        print(f"[UNIT {self.unit_id}] Synchronizing with City {CITY_ID}...")
+        # Logic: Complete Tutorial -> Map -> Relocate
+        self.human_delay()
+
+    def establish_presence(self):
+        name = FACTION_MAIN if self.is_leader else f"{FACTION_SUB}{self.unit_id}"
+        print(f"[UNIT {self.unit_id}] Establishing Faction: {name}")
+        # Logic: Spend 200 Gold -> Create Faction
+        self.human_delay()
+
+    def protect_and_attack(self):
+        print(f"[UNIT {self.unit_id}] Scanning for {PRIMARY_TARGET} targets...")
+        print(f"[UNIT {self.unit_id}] Shielding {PROTECTED_ASSETS}...")
+        self.human_delay()
+
+    def intimidate_chat(self):
+        manifesto_lines = [
+            f"Terminator Protocol Active. {LEADER} is the Alpha.",
+            f"MTX identified as systemic threat. Eradication in progress.",
+            f"Protection for {PROTECTED_ASSETS} is absolute.",
+            "We do not sleep. We do not negotiate. Leave City 743.",
+            f"Scanning City 743 for {PRIMARY_TARGET} weakness..."
+        ]
+        msg = random.choice(manifesto_lines)
+        # Logic: Open Chat -> Type msg -> Enter
+        print(f"[BROADCAST]: {msg}")
+        self.human_delay()
+
+# MASSIVE DEPLOYMENT
+def initiate_war_protocol():
+    print(f"--- INITIALIZING TERMINATOR ARMY FOR {LEADER} ---")
+    army = [TerminatorBot(i) for i in range(1, 51)]
+    
+    for unit in army:
+        unit.deploy_to_743()
+        unit.establish_presence()
+        unit.intimidate_chat()
+        unit.protect_and_attack()
+    
+    print(f"--- ALL 50 UNITS OPERATIONAL IN CITY 743 ---")
+
+if __name__ == "__main__":
+    initiate_war_protocol()
