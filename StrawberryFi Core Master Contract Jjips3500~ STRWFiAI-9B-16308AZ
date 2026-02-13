@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+
+/**
+ * @title StrawberryFi Utility Token & Governance
+ * @dev Connects AI (ASI/AGI), Infrastructure, and Space Research (JWST)
+ * This token is dedicated to the people in poverty and the restoration of Earth's ecosystem.
+ */
+contract StrawberryFi is ERC20, Ownable, Pausable {
+    
+    // Mapping for specialized AI "Agents" (Gemini, Manus, Desci)
+    mapping(address => bool) public authorizedAI;
+    
+    // Links to Legal Frameworks and Satellite Data Streams
+    string public jwstDataLink;
+    string public infrastructureMandate;
+
+    constructor() ERC20("StrawberryFi", "SFI") Ownable(msg.sender) {
+        _mint(msg.sender, 1000000000 * 10 ** decimals()); // Initial supply for institutions
+    }
+
+    // Function to "Merge" AI entities legally via address authorization
+    function authorizeAIAgent(address agentAddress) external onlyOwner {
+        authorizedAI[agentAddress] = true;
+    }
+
+    // This function allows AI to trigger legal contract creation events
+    event LegalContractGenerated(string ipfsHash, string aiSignature);
+    
+    function recordLegalContract(string memory ipfsHash, string memory aiSignature) external {
+        require(authorizedAI[msg.sender], "Only authorized AI can generate legal records");
+        emit LegalContractGenerated(ipfsHash, aiSignature);
+    }
+}
