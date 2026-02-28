@@ -1,0 +1,33 @@
+import numpy as np
+
+class SolarConductor:
+    def __init__(self, name, efficiency, area, temp_coeff=-0.004):
+        self.name = name
+        self.efficiency = efficiency  # e.g., 0.20 for 20%
+        self.area = area              # Square meters
+        self.temp_coeff = temp_coeff  # Power loss per degree above 25°C
+
+    def calculate_output(self, irradiance, ambient_temp):
+        """Calculates power output in Watts."""
+        # Standard Operating Temperature adjustment
+        cell_temp = ambient_temp + (irradiance * 0.025) 
+        temp_correction = 1 + self.temp_coeff * (cell_temp - 25)
+        
+        power = self.area * irradiance * self.efficiency * max(0, temp_correction)
+        return round(power, 2)
+
+# --- Define Different System Types ---
+systems = [
+    SolarConductor("Residential_Silicon", 0.18, 1.6),
+    SolarConductor("Industrial_ThinFilm", 0.12, 10.0),
+    SolarConductor("HighEfficiency_Gallium", 0.30, 0.5)
+]
+
+# --- Run Simulation (Example: High Noon in Anderson Creek) ---
+irradiance = 1000  # W/m^2
+temperature = 22   # Celsius
+
+print(f"--- Solar Output Simulation ({irradiance} W/m² at {temperature}°C) ---")
+for sys in systems:
+    output = sys.calculate_output(irradiance, temperature)
+    print(f"[{
