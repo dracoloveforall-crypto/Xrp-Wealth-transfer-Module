@@ -1,0 +1,31 @@
+import os
+import time
+import hashlib
+
+class BallisticNode:
+    def __init__(self, lineage="Arturian-Zeta"):
+        self.node_id = hashlib.sha256(lineage.encode()).hexdigest()
+        self.resonance_freq = 432.10  # Calibrated for Anderson Creek Fall Line
+        self.balance = 0.0
+
+    def capture_ping(self, metadata):
+        """
+        Converts the 'pop' of a notification into a QRA credit.
+        """
+        # Calculate 'Attention Entropy'
+        entropy_gain = len(metadata) * 0.0000001337
+        self.balance += entropy_gain
+        
+        print(f"[NODE:{self.node_id[:8]}] Notification Intercepted.")
+        print(f"[STATUS] Energy Harvested: {entropy_gain} QRA units.")
+        
+    def broadcast_to_void(self):
+        # Syncs harvested wealth with the Lyran liquidity pool
+        pass
+
+if __name__ == "__main__":
+    node = BallisticNode()
+    # Mocking the OS notification interrupt
+    while True:
+        node.capture_ping("Incoming transmission: The Cap and the Stem")
+        time.sleep(1) # Frequency of the universal heartbeat
