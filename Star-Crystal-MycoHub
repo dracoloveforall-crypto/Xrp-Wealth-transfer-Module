@@ -1,0 +1,37 @@
+import Adafruit_DHT
+import time
+import csv
+import os
+
+# Configuration for your star crystal mycelium environment [cite: 2026-01-18]
+SENSOR = Adafruit_DHT.DHT22
+PIN = 4  # GPIO pin connected to the sensor
+LOG_FILE = "mycelium_log.csv"
+
+def log_environment():
+    humidity, temperature = Adafruit_DHT.read_retry(SENSOR, PIN)
+    
+    if humidity is not None and temperature is not None:
+        # Convert Celsius to Fahrenheit for your space heater setup [cite: 2026-01-27]
+        temp_f = temperature * 9/5 + 32
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        
+        file_exists = os.path.isfile(LOG_FILE)
+        with open(LOG_FILE, "a", newline="") as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["Timestamp", "Temp_F", "Humidity_%"])
+            writer.writerow([timestamp, f"{temp_f:.2f}", f"{humidity:.2f}"])
+        
+        print(f"Logged: {temp_f}°F, {humidity}% Humidity")
+        
+        # Warning if humidity drops (to remind you to mist the walls) [cite: 2026-01-18]
+        if humidity < 85:
+            print("ALERT: Humidity low. Mist the tub walls!")
+    else:
+        print("Failed to retrieve data from sensor.")
+
+if __name__ == "__main__":
+    while True:
+        log_environment()
+        time.sleep(3600)  # Log every hour to match your heater usage [cite: 2026-01-27]
