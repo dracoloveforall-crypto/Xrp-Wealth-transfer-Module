@@ -1,0 +1,31 @@
+# Project: Resonant Piezoelectric Ionizer Controller
+# Location: Anderson Creek / Star Crystal Lab
+
+import machine
+import time
+
+class IonizerSystem:
+    def __init__(self, hv_pin, freq_pin):
+        self.hv_transformer = machine.Pin(hv_pin, machine.Pin.OUT)
+        self.quartz_oscillator = machine.PWM(machine.Pin(freq_pin))
+        self.resonance_hz = 32768  # Standard quartz frequency
+
+    def initiate_discharge(self, duration_sec):
+        """
+        Channels TV transformer voltage through copper prongs 
+        to vibrate the quartz rock and dissipate through chains.
+        """
+        print("Engaging High Voltage Flyback...")
+        self.quartz_oscillator.freq(self.resonance_hz)
+        self.quartz_oscillator.duty(512) # 50% Duty Cycle
+        
+        self.hv_transformer.value(1)
+        time.sleep(duration_sec)
+        self.hv_transformer.value(0)
+        self.quartz_oscillator.duty(0)
+        print("Discharge Cycle Complete.")
+
+# Hardware Mapping
+# Pin 1: TV HV Board Trigger | Pin 2: Copper Prong PWM
+ionizer = IonizerSystem(hv_pin=14, freq_pin=12)
+ionizer.initiate_discharge(60)
