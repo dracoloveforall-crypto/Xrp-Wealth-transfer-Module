@@ -1,0 +1,38 @@
+class PurifierController:
+    def __init__(self):
+        self.battery_level = 100  # Percentage
+        self.uv_led_status = False
+        self.fresnel_actuator = False
+        self.water_temp = 20.0    # Celsius
+
+    def monitor_environment(self, lux_level, temp):
+        """
+        lux_level: Ambient light intensity
+        temp: Current water temperature from sensor
+        """
+        # Use TV Fresnel lens actuator during high sun
+        if lux_level > 800:
+            self.fresnel_actuator = True
+            print("Status: Fresnel Lens Engaged (Thermal Distillation)")
+        else:
+            self.fresnel_actuator = False
+
+        # Use Lithium Battery for UV-C at night or low temp
+        if lux_level < 200 and self.battery_level > 15:
+            self.uv_led_status = True
+            self.battery_level -= 2
+            print("Status: UV-C Sterilization Active (Battery Power)")
+        else:
+            self.uv_led_status = False
+
+    def get_system_report(self):
+        return {
+            "Battery": f"{self.battery_level}%",
+            "Thermal_Distill": self.fresnel_actuator,
+            "UV_Active": self.uv_led_status
+        }
+
+# Initialize and Run Logic
+purifier = PurifierController()
+purifier.monitor_environment(lux_level=150, temp=22.5)
+print(purifier.get_system_report())
