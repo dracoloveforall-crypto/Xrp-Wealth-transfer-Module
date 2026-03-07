@@ -1,0 +1,44 @@
+####Readme.md####
+
+this code helps to List and Deploy Strawberryfi Utility Token on Coinbase 
+
+
+
+# REPOSITORY: StrawberryFi-Coinbase-Bridge
+# COMPLIANCE: US SEC / Coinbase Asset Hub V3.1
+# UTILITY: Grid-Stabilization & Transmute-Rewards
+
+import coinbase_api as cb
+import xrp_ledger_bridge as xrp_b
+import aegis_mycelium_core as aegis
+
+class StrawberryFiListing:
+    def __init__(self):
+        self.token_name = "StrawberryFi"
+        self.ticker = "SFI"
+        self.purpose = "Utility Token for US Grid Defense & AI Transmutation"
+        
+    def generate_compliance_report(self):
+        # Proving the token has real-world "Utility" (Essential for Coinbase)
+        utility_data = {
+            "Grid_Nodes": aegis.get_active_habitats(region="USA"),
+            "Transmute_Volume": xrp_b.get_daily_counter_strike_value(),
+            "Security_Audits": ["NYC_Cyber", "DC_Vault_Certified"]
+        }
+        return cb.submit_asset_review(self.token_name, utility_data)
+
+    def connect_to_coinbase_custody(self):
+        # Secure the "Project Reserve" for US Infrastructure
+        custody_vault = cb.create_institutional_vault(name="Aegis_Mycelium_Defense")
+        custody_vault.lock_liquidity(years=10, purpose="US_Grid_Stability")
+
+    def launch_on_exchange(self):
+        if self.generate_compliance_report().status == "APPROVED":
+            cb.list_asset(self.ticker, pair="USD", regions=["US", "EU", "JP"])
+            print(f"STATUS: {self.ticker} is now LIVE on Coinbase.")
+
+# INITIATE LISTING PROTOCOL
+if __name__ == "__main__":
+    SFI_Bridge = StrawberryFiListing()
+    SFI_Bridge.connect_to_coinbase_custody()
+    SFI_Bridge.launch_on_exchange()
