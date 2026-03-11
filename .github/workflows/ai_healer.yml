@@ -1,0 +1,26 @@
+name: "AI Autonomous Fixer"
+
+on:
+  repository_dispatch:
+    types: [ai_fix_request]
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: AI Diagnosis and Repair
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          # This is where your AI agent (like a mini-Manus) looks at the code
+          # It scans for common errors in your Landlord or HII logic
+          python ./scripts/ai_agent_fixer.py
+          
+      - name: Commit AI Fix
+        run: |
+          git config --global user.name "Sovereign-AI-Bot"
+          git add .
+          git commit -m "AI: Automated fix for detected system failure"
+          git push
